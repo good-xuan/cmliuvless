@@ -1,839 +1,2172 @@
+//nat64自动填充proxyip，无需且不支持proxyip设置
+import { connect } from "cloudflare:sockets";
+const WS_READY_STATE_OPEN = 1;
+let userID = "86c50e3a-5b87-49dd-bd20-03c7f2735e40";
+const cn_hostnames = [''];
+let CDNIP = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d\u002e\u0073\u0067'
+// http_ip
+let IP1 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d'
+let IP2 = '\u0063\u0069\u0073\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d'
+let IP3 = '\u0061\u0066\u0072\u0069\u0063\u0061\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d'
+let IP4 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d\u002e\u0073\u0067'
+let IP5 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u0065\u0075\u0072\u006f\u0070\u0065\u002e\u0061\u0074'
+let IP6 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d\u002e\u006d\u0074'
+let IP7 = '\u0071\u0061\u002e\u0076\u0069\u0073\u0061\u006d\u0069\u0064\u0064\u006c\u0065\u0065\u0061\u0073\u0074\u002e\u0063\u006f\u006d'
 
-// 部署完成后在网址后面加上这个，获取自建节点和机场聚合节点，/?token=auto或/auto或
+// https_ip
+let IP8 = '\u0075\u0073\u0061\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d'
+let IP9 = '\u006d\u0079\u0061\u006e\u006d\u0061\u0072\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d'
+let IP10 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d\u002e\u0074\u0077'
+let IP11 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u0065\u0075\u0072\u006f\u0070\u0065\u002e\u0063\u0068'
+let IP12 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u002e\u0063\u006f\u006d\u002e\u0062\u0072'
+let IP13 = '\u0077\u0077\u0077\u002e\u0076\u0069\u0073\u0061\u0073\u006f\u0075\u0074\u0068\u0065\u0061\u0073\u0074\u0065\u0075\u0072\u006f\u0070\u0065\u002e\u0063\u006f\u006d'
 
-let mytoken = 'auto';
-let guestToken = ''; //可以随便取，或者uuid生成，https://1024tools.com/uuid
-let BotToken = ''; //可以为空，或者@BotFather中输入/start，/newbot，并关注机器人
-let ChatID = ''; //可以为空，或者@userinfobot中获取，/start
-let TG = 0; //小白勿动， 开发者专用，1 为推送所有的访问信息，0 为不推送订阅转换后端的访问信息与异常访问
-let FileName = 'CF-Workers-SUB';
-let SUBUpdateTime = 6; //自定义订阅更新时间，单位小时
-let total = 99;//TB
-let timestamp = 4102329600000;//2099-12-31
+// http_port
+let PT1 = '80'
+let PT2 = '8080'
+let PT3 = '8880'
+let PT4 = '2052'
+let PT5 = '2082'
+let PT6 = '2086'
+let PT7 = '2095'
 
-//节点链接 + 订阅链接
-let MainData = `
-https://raw.githubusercontent.com/mfuu/v2ray/master/v2ray
-https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/list_raw.txt
-https://raw.githubusercontent.com/ermaozi/get_subscribe/main/subscribe/v2ray.txt
-https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/v2
-https://raw.githubusercontent.com/mahdibland/SSAggregator/master/sub/airport_sub_merge.txt
-https://raw.githubusercontent.com/mahdibland/SSAggregator/master/sub/sub_merge.txt
-https://raw.githubusercontent.com/Pawdroid/Free-servers/refs/heads/main/sub
-`
-
-let urls = [];
-let subConverter = "SUBAPI.cmliussss.net"; //在线订阅转换后端，目前使用CM的订阅转换功能。支持自建psub 可自行搭建https://github.com/bulianglin/psub
-let subConfig = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini"; //订阅配置文件
-let subProtocol = 'https';
+// https_port
+let PT8 = '443'
+let PT9 = '8443'
+let PT10 = '2053'
+let PT11 = '2083'
+let PT12 = '2087'
+let PT13 = '2096'
 
 export default {
-	async fetch(request, env) {
-		const userAgentHeader = request.headers.get('User-Agent');
-		const userAgent = userAgentHeader ? userAgentHeader.toLowerCase() : "null";
-		const url = new URL(request.url);
-		const token = url.searchParams.get('token');
-		mytoken = env.TOKEN || mytoken;
-		BotToken = env.TGTOKEN || BotToken;
-		ChatID = env.TGID || ChatID;
-		TG = env.TG || TG;
-		subConverter = env.SUBAPI || subConverter;
-		if (subConverter.includes("http://")) {
-			subConverter = subConverter.split("//")[1];
-			subProtocol = 'http';
-		} else {
-			subConverter = subConverter.split("//")[1] || subConverter;
-		}
-		subConfig = env.SUBCONFIG || subConfig;
-		FileName = env.SUBNAME || FileName;
-
-		const currentDate = new Date();
-		currentDate.setHours(0, 0, 0, 0);
-		const timeTemp = Math.ceil(currentDate.getTime() / 1000);
-		const fakeToken = await MD5MD5(`${mytoken}${timeTemp}`);
-		guestToken = env.GUESTTOKEN || env.GUEST || guestToken;
-		if (!guestToken) guestToken = await MD5MD5(mytoken);
-		const 访客订阅 = guestToken;
-		//console.log(`${fakeUserID}\n${fakeHostName}`); // 打印fakeID
-
-		let UD = Math.floor(((timestamp - Date.now()) / timestamp * total * 1099511627776) / 2);
-		total = total * 1099511627776;
-		let expire = Math.floor(timestamp / 1000);
-		SUBUpdateTime = env.SUBUPTIME || SUBUpdateTime;
-
-		if (!([mytoken, fakeToken, 访客订阅].includes(token) || url.pathname == ("/" + mytoken) || url.pathname.includes("/" + mytoken + "?"))) {
-			if (TG == 1 && url.pathname !== "/" && url.pathname !== "/favicon.ico") await sendMessage(`#异常访问 ${FileName}`, request.headers.get('CF-Connecting-IP'), `UA: ${userAgent}</tg-spoiler>\n域名: ${url.hostname}\n<tg-spoiler>入口: ${url.pathname + url.search}</tg-spoiler>`);
-			if (env.URL302) return Response.redirect(env.URL302, 302);
-			else if (env.URL) return await proxyURL(env.URL, url);
-			else return new Response(await nginx(), {
+  /**
+   * @param {any} request
+   * @param {{uuid: string, proxyip: string, cdnip: string, ip1: string, ip2: string, ip3: string, ip4: string, ip5: string, ip6: string, ip7: string, ip8: string, ip9: string, ip10: string, ip11: string, ip12: string, ip13: string, pt1: string, pt2: string, pt3: string, pt4: string, pt5: string, pt6: string, pt7: string, pt8: string, pt9: string, pt10: string, pt11: string, pt12: string, pt13: string}} env
+   * @param {any} ctx
+   * @returns {Promise<Response>}
+   */
+  async fetch(request, env, ctx) {
+    try {
+      userID = env.uuid || userID;
+      CDNIP = env.cdnip || CDNIP;
+	  IP1 = env.ip1 || IP1;
+	  IP2 = env.ip2 || IP2;
+	  IP3 = env.ip3 || IP3;
+	  IP4 = env.ip4 || IP4;
+	  IP5 = env.ip5 || IP5;
+	  IP6 = env.ip6 || IP6;
+	  IP7 = env.ip7 || IP7;
+	  IP8 = env.ip8 || IP8;
+	  IP9 = env.ip9 || IP9;
+	  IP10 = env.ip10 || IP10;
+	  IP11 = env.ip11 || IP11;
+	  IP12 = env.ip12 || IP12;
+	  IP13 = env.ip13 || IP13;
+	  PT1 = env.pt1 || PT1;
+	  PT2 = env.pt2 || PT2;
+	  PT3 = env.pt3 || PT3;
+	  PT4 = env.pt4 || PT4;
+	  PT5 = env.pt5 || PT5;
+	  PT6 = env.pt6 || PT6;
+	  PT7 = env.pt7 || PT7;
+	  PT8 = env.pt8 || PT8;
+	  PT9 = env.pt9 || PT9;
+	  PT10 = env.pt10 || PT10;
+	  PT11 = env.pt11 || PT11;
+	  PT12 = env.pt12 || PT12;
+	  PT13 = env.pt13 || PT13;
+      const upgradeHeader = request.headers.get("Upgrade");
+      const url = new URL(request.url);
+      if (!upgradeHeader || upgradeHeader !== "websocket") {
+        const url = new URL(request.url);
+        switch (url.pathname) {
+          case `/${userID}`: {
+            const \u0076\u006c\u0065\u0073\u0073Config = get\u0076\u006c\u0065\u0073\u0073Config(userID, request.headers.get("Host"));
+            return new Response(`${\u0076\u006c\u0065\u0073\u0073Config}`, {
+              status: 200,
+              headers: {
+                "Content-Type": "text/html;charset=utf-8",
+              },
+            });
+          }
+		  case `/${userID}/ty`: {
+			const tyConfig = gettyConfig(userID, request.headers.get('Host'));
+			return new Response(`${tyConfig}`, {
 				status: 200,
 				headers: {
-					'Content-Type': 'text/html; charset=UTF-8',
-				},
+					"Content-Type": "text/plain;charset=utf-8",
+				}
 			});
-		} else {
-			if (env.KV) {
-				await 迁移地址列表(env, 'LINK.txt');
-				if (userAgent.includes('mozilla') && !url.search) {
-					await sendMessage(`#编辑订阅 ${FileName}`, request.headers.get('CF-Connecting-IP'), `UA: ${userAgentHeader}</tg-spoiler>\n域名: ${url.hostname}\n<tg-spoiler>入口: ${url.pathname + url.search}</tg-spoiler>`);
-					return await KV(request, env, 'LINK.txt', 访客订阅);
-				} else {
-					MainData = await env.KV.get('LINK.txt') || MainData;
-				}
-			} else {
-				MainData = env.LINK || MainData;
-				if (env.LINKSUB) urls = await ADD(env.LINKSUB);
-			}
-			let 重新汇总所有链接 = await ADD(MainData + '\n' + urls.join('\n'));
-			let 自建节点 = "";
-			let 订阅链接 = "";
-			for (let x of 重新汇总所有链接) {
-				if (x.toLowerCase().startsWith('http')) {
-					订阅链接 += x + '\n';
-				} else {
-					自建节点 += x + '\n';
-				}
-			}
-			MainData = 自建节点;
-			urls = await ADD(订阅链接);
-			await sendMessage(`#获取订阅 ${FileName}`, request.headers.get('CF-Connecting-IP'), `UA: ${userAgentHeader}</tg-spoiler>\n域名: ${url.hostname}\n<tg-spoiler>入口: ${url.pathname + url.search}</tg-spoiler>`);
-
-			let 订阅格式 = 'base64';
-			if (userAgent.includes('null') || userAgent.includes('subconverter') || userAgent.includes('nekobox') || userAgent.includes(('CF-Workers-SUB').toLowerCase())) {
-				订阅格式 = 'base64';
-			} else if (userAgent.includes('clash') || (url.searchParams.has('clash') && !userAgent.includes('subconverter'))) {
-				订阅格式 = 'clash';
-			} else if (userAgent.includes('sing-box') || userAgent.includes('singbox') || ((url.searchParams.has('sb') || url.searchParams.has('singbox')) && !userAgent.includes('subconverter'))) {
-				订阅格式 = 'singbox';
-			} else if (userAgent.includes('surge') || (url.searchParams.has('surge') && !userAgent.includes('subconverter'))) {
-				订阅格式 = 'surge';
-			} else if (userAgent.includes('quantumult%20x') || (url.searchParams.has('quanx') && !userAgent.includes('subconverter'))) {
-				订阅格式 = 'quanx';
-			} else if (userAgent.includes('loon') || (url.searchParams.has('loon') && !userAgent.includes('subconverter'))) {
-				订阅格式 = 'loon';
-			}
-
-			let subConverterUrl;
-			let 订阅转换URL = `${url.origin}/${await MD5MD5(fakeToken)}?token=${fakeToken}`;
-			//console.log(订阅转换URL);
-			let req_data = MainData;
-
-			let 追加UA = 'v2rayn';
-			if (url.searchParams.has('b64') || url.searchParams.has('base64')) 订阅格式 = 'base64';
-			else if (url.searchParams.has('clash')) 追加UA = 'clash';
-			else if (url.searchParams.has('singbox')) 追加UA = 'singbox';
-			else if (url.searchParams.has('surge')) 追加UA = 'surge';
-			else if (url.searchParams.has('quanx')) 追加UA = 'Quantumult%20X';
-			else if (url.searchParams.has('loon')) 追加UA = 'Loon';
-
-			const 请求订阅响应内容 = await getSUB(urls, request, 追加UA, userAgentHeader);
-			console.log(请求订阅响应内容);
-			req_data += 请求订阅响应内容[0].join('\n');
-			订阅转换URL += "|" + 请求订阅响应内容[1];
-
-			if (env.WARP) 订阅转换URL += "|" + (await ADD(env.WARP)).join("|");
-			//修复中文错误
-			const utf8Encoder = new TextEncoder();
-			const encodedData = utf8Encoder.encode(req_data);
-			//const text = String.fromCharCode.apply(null, encodedData);
-			const utf8Decoder = new TextDecoder();
-			const text = utf8Decoder.decode(encodedData);
-
-			//去重
-			const uniqueLines = new Set(text.split('\n'));
-			const result = [...uniqueLines].join('\n');
-			//console.log(result);
-
-			let base64Data;
-			try {
-				base64Data = btoa(result);
-			} catch (e) {
-				function encodeBase64(data) {
-					const binary = new TextEncoder().encode(data);
-					let base64 = '';
-					const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-					for (let i = 0; i < binary.length; i += 3) {
-						const byte1 = binary[i];
-						const byte2 = binary[i + 1] || 0;
-						const byte3 = binary[i + 2] || 0;
-
-						base64 += chars[byte1 >> 2];
-						base64 += chars[((byte1 & 3) << 4) | (byte2 >> 4)];
-						base64 += chars[((byte2 & 15) << 2) | (byte3 >> 6)];
-						base64 += chars[byte3 & 63];
-					}
-
-					const padding = 3 - (binary.length % 3 || 3);
-					return base64.slice(0, base64.length - padding) + '=='.slice(0, padding);
-				}
-
-				base64Data = encodeBase64(result.replace(/\u0026/g, '&'))
-			}
-
-			if (订阅格式 == 'base64' || token == fakeToken) {
-				return new Response(base64Data, {
-					headers: {
-						"content-type": "text/plain; charset=utf-8",
-						"Profile-Update-Interval": `${SUBUpdateTime}`,
-						//"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
-					}
-				});
-			} else if (订阅格式 == 'clash') {
-				subConverterUrl = `${subProtocol}://${subConverter}/sub?target=clash&url=${encodeURIComponent(订阅转换URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-			} else if (订阅格式 == 'singbox') {
-				subConverterUrl = `${subProtocol}://${subConverter}/sub?target=singbox&url=${encodeURIComponent(订阅转换URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-			} else if (订阅格式 == 'surge') {
-				subConverterUrl = `${subProtocol}://${subConverter}/sub?target=surge&ver=4&url=${encodeURIComponent(订阅转换URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-			} else if (订阅格式 == 'quanx') {
-				subConverterUrl = `${subProtocol}://${subConverter}/sub?target=quanx&url=${encodeURIComponent(订阅转换URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&udp=true`;
-			} else if (订阅格式 == 'loon') {
-				subConverterUrl = `${subProtocol}://${subConverter}/sub?target=loon&url=${encodeURIComponent(订阅转换URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false`;
-			}
-			//console.log(订阅转换URL);
-			try {
-				const subConverterResponse = await fetch(subConverterUrl);
-
-				if (!subConverterResponse.ok) {
-					return new Response(base64Data, {
-						headers: {
-							"content-type": "text/plain; charset=utf-8",
-							"Profile-Update-Interval": `${SUBUpdateTime}`,
-							//"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
-						}
-					});
-					//throw new Error(`Error fetching subConverterUrl: ${subConverterResponse.status} ${subConverterResponse.statusText}`);
-				}
-				let subConverterContent = await subConverterResponse.text();
-				if (订阅格式 == 'clash') subConverterContent = await clashFix(subConverterContent);
-				return new Response(subConverterContent, {
-					headers: {
-						"Content-Disposition": `attachment; filename*=utf-8''${encodeURIComponent(FileName)}`,
-						"content-type": "text/plain; charset=utf-8",
-						"Profile-Update-Interval": `${SUBUpdateTime}`,
-						//"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
-
-					},
-				});
-			} catch (error) {
-				return new Response(base64Data, {
-					headers: {
-						"content-type": "text/plain; charset=utf-8",
-						"Profile-Update-Interval": `${SUBUpdateTime}`,
-						//"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
-					}
-				});
-			}
 		}
-	}
+		case `/${userID}/cl`: {
+			const clConfig = getclConfig(userID, request.headers.get('Host'));
+			return new Response(`${clConfig}`, {
+				status: 200,
+				headers: {
+					"Content-Type": "text/plain;charset=utf-8",
+				}
+			});
+		}
+		case `/${userID}/sb`: {
+			const sbConfig = getsbConfig(userID, request.headers.get('Host'));
+			return new Response(`${sbConfig}`, {
+				status: 200,
+				headers: {
+					"Content-Type": "application/json;charset=utf-8",
+				}
+			});
+		}
+		case `/${userID}/pty`: {
+			const ptyConfig = getptyConfig(userID, request.headers.get('Host'));
+			return new Response(`${ptyConfig}`, {
+				status: 200,
+				headers: {
+					"Content-Type": "text/plain;charset=utf-8",
+				}
+			});
+		}
+		case `/${userID}/pcl`: {
+			const pclConfig = getpclConfig(userID, request.headers.get('Host'));
+			return new Response(`${pclConfig}`, {
+				status: 200,
+				headers: {
+					"Content-Type": "text/plain;charset=utf-8",
+				}
+			});
+		}
+		case `/${userID}/psb`: {
+			const psbConfig = getpsbConfig(userID, request.headers.get('Host'));
+			return new Response(`${psbConfig}`, {
+				status: 200,
+				headers: {
+					"Content-Type": "application/json;charset=utf-8",
+				}
+			});
+		}
+          default:
+            // return new Response('Not found', { status: 404 });
+            // For any other path, reverse proxy to 'ramdom website' and return the original response, caching it in the process
+            if (cn_hostnames.includes('')) {
+            return new Response(JSON.stringify(request.cf, null, 4), {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json;charset=utf-8",
+              },
+            });
+            }
+            const randomHostname = cn_hostnames[Math.floor(Math.random() * cn_hostnames.length)];
+            const newHeaders = new Headers(request.headers);
+            newHeaders.set("cf-connecting-ip", "1.2.3.4");
+            newHeaders.set("x-forwarded-for", "1.2.3.4");
+            newHeaders.set("x-real-ip", "1.2.3.4");
+            newHeaders.set("referer", "https://www.google.com/search?q=edtunnel");
+            // Use fetch to proxy the request to 15 different domains
+            const proxyUrl = "https://" + randomHostname + url.pathname + url.search;
+            let modifiedRequest = new Request(proxyUrl, {
+              method: request.method,
+              headers: newHeaders,
+              body: request.body,
+              redirect: "manual",
+            });
+            const proxyResponse = await fetch(modifiedRequest, { redirect: "manual" });
+            // Check for 302 or 301 redirect status and return an error response
+            if ([301, 302].includes(proxyResponse.status)) {
+              return new Response(`Redirects to ${randomHostname} are not allowed.`, {
+                status: 403,
+                statusText: "Forbidden",
+              });
+            }
+            // Return the response from the proxy server
+            return proxyResponse;
+        }
+      }
+      return await handle\u0076\u006c\u0065\u0073\u0073WebSocket(request);
+    } catch (err) {
+      /** @type {Error} */ let e = err;
+      return new Response(e.toString());
+    }
+  },
 };
 
-async function ADD(envadd) {
-	var addtext = envadd.replace(/[	"'|\r\n]+/g, ',').replace(/,+/g, ',');	// 将空格、双引号、单引号和换行符替换为逗号
-	//console.log(addtext);
-	if (addtext.charAt(0) == ',') addtext = addtext.slice(1);
-	if (addtext.charAt(addtext.length - 1) == ',') addtext = addtext.slice(0, addtext.length - 1);
-	const add = addtext.split(',');
-	//console.log(add);
-	return add;
+async function handle\u0076\u006c\u0065\u0073\u0073WebSocket(request) {
+  const wsPair = new WebSocketPair();
+  const [clientWS, serverWS] = Object.values(wsPair);
+
+  serverWS.accept();
+
+  const earlyDataHeader = request.headers.get('sec-websocket-protocol') || '';
+  const wsReadable = createWebSocketReadableStream(serverWS, earlyDataHeader);
+  let remoteSocket = null;
+
+  let udpStreamWrite = null;
+  let isDns = false;
+  
+  wsReadable.pipeTo(new WritableStream({
+    async write(chunk) {
+
+      if (isDns && udpStreamWrite) {
+        return udpStreamWrite(chunk);
+      }
+      
+      if (remoteSocket) {
+        const writer = remoteSocket.writable.getWriter();
+        await writer.write(chunk);
+        writer.releaseLock();
+        return;
+      }
+
+      const result = parse\u0076\u006c\u0065\u0073\u0073Header(chunk, userID);
+      if (result.hasError) {
+        throw new Error(result.message);
+      }
+
+      const \u0076\u006c\u0065\u0073\u0073RespHeader = new Uint8Array([result.\u0076\u006c\u0065\u0073\u0073Version[0], 0]);
+      const rawClientData = chunk.slice(result.rawDataIndex);
+      
+      if (result.isUDP) {
+        if (result.portRemote === 53) {
+          isDns = true;
+          const { write } = await handleUDPOutBound(serverWS, \u0076\u006c\u0065\u0073\u0073RespHeader);
+          udpStreamWrite = write;
+          udpStreamWrite(rawClientData);
+          return;
+        } else {
+          throw new Error('UDP代理仅支持DNS(端口53)');
+        }
+      }
+
+      async function connectAndWrite(address, port) {
+        const tcpSocket = await connect({
+          hostname: address,
+          port: port
+        });
+        remoteSocket = tcpSocket;
+        const writer = tcpSocket.writable.getWriter();
+        await writer.write(rawClientData);
+        writer.releaseLock();
+        return tcpSocket;
+      }
+
+      function convertToNAT64IPv6(ipv4Address) {
+        const parts = ipv4Address.split('.');
+        if (parts.length !== 4) {
+          throw new Error('无效的IPv4地址');
+        }
+        
+        const hex = parts.map(part => {
+          const num = parseInt(part, 10);
+          if (num < 0 || num > 255) {
+            throw new Error('无效的IPv4地址段');
+          }
+          return num.toString(16).padStart(2, '0');
+        });
+        const prefixes = ['2001:67c:2960:6464::']; //,'2a01:4f9:c010:3f02:64::'
+        const chosenPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        return `[${chosenPrefix}${hex[0]}${hex[1]}:${hex[2]}${hex[3]}]`;
+      }
+
+      async function getIPv6ProxyAddress(domain) {
+        try {
+          const dnsQuery = await fetch(`https://1.1.1.1/dns-query?name=${domain}&type=A`, {
+            headers: {
+              'Accept': 'application/dns-json'
+            }
+          });
+          
+          const dnsResult = await dnsQuery.json();
+          if (dnsResult.Answer && dnsResult.Answer.length > 0) {
+            const aRecord = dnsResult.Answer.find(record => record.type === 1);
+            if (aRecord) {
+              const ipv4Address = aRecord.data;
+              return convertToNAT64IPv6(ipv4Address);
+            }
+          }
+          throw new Error('无法解析域名的IPv4地址');
+        } catch (err) {
+          throw new Error(`DNS解析失败: ${err.message}`);
+        }
+      }
+
+      async function retry() {
+        try {
+          const proxyIP = await getIPv6ProxyAddress(result.addressRemote);
+          console.log(`尝试通过NAT64 IPv6地址 ${proxyIP} 连接...`);
+          const tcpSocket = await connect({
+            hostname: proxyIP,
+            port: result.portRemote
+          });
+          remoteSocket = tcpSocket;
+          const writer = tcpSocket.writable.getWriter();
+          await writer.write(rawClientData);
+          writer.releaseLock();
+
+          tcpSocket.closed.catch(error => {
+            console.error('NAT64 IPv6连接关闭错误:', error);
+          }).finally(() => {
+            if (serverWS.readyState === WS_READY_STATE_OPEN) {
+              serverWS.close(1000, '连接已关闭');
+            }
+          });
+          
+          pipeRemoteToWebSocket(tcpSocket, serverWS, \u0076\u006c\u0065\u0073\u0073RespHeader, null);
+        } catch (err) {
+          console.error('NAT64 IPv6连接失败:', err);
+          serverWS.close(1011, 'NAT64 IPv6连接失败: ' + err.message);
+        }
+      }
+
+      try {
+        const tcpSocket = await connectAndWrite(result.addressRemote, result.portRemote);
+        pipeRemoteToWebSocket(tcpSocket, serverWS, \u0076\u006c\u0065\u0073\u0073RespHeader, retry);
+      } catch (err) {
+        console.error('连接失败:', err);
+        serverWS.close(1011, '连接失败');
+      }
+    },
+    close() {
+      if (remoteSocket) {
+        closeSocket(remoteSocket);
+      }
+    }
+  })).catch(err => {
+    console.error('WebSocket 错误:', err);
+    closeSocket(remoteSocket);
+    serverWS.close(1011, '内部错误');
+  });
+
+  return new Response(null, {
+    status: 101,
+    webSocket: clientWS,
+  });
 }
 
-async function nginx() {
-	const text = `
-	<!DOCTYPE html>
-	<html>
-	<head>
-	<title>Welcome to nginx!</title>
-	<style>
-		body {
-			width: 35em;
-			margin: 0 auto;
-			font-family: Tahoma, Verdana, Arial, sans-serif;
-		}
-	</style>
-	</head>
-	<body>
-	<h1>Welcome to nginx!</h1>
-	<p>If you see this page, the nginx web server is successfully installed and
-	working. Further configuration is required.</p>
+function createWebSocketReadableStream(ws, earlyDataHeader) {
+  return new ReadableStream({
+    start(controller) {
+      ws.addEventListener('message', event => {
+        controller.enqueue(event.data);
+      });
+      
+      ws.addEventListener('close', () => {
+        controller.close();
+      });
+      
+      ws.addEventListener('error', err => {
+        controller.error(err);
+      });
+      
+      if (earlyDataHeader) {
+        try {
+          const decoded = atob(earlyDataHeader.replace(/-/g, '+').replace(/_/g, '/'));
+          const data = Uint8Array.from(decoded, c => c.charCodeAt(0));
+          controller.enqueue(data.buffer);
+        } catch (e) {
+        }
+      }
+    }
+  });
+}
+
+function parse\u0076\u006c\u0065\u0073\u0073Header(buffer, userID) {
+  if (buffer.byteLength < 24) {
+    return { hasError: true, message: '无效的头部长度' };
+  }
+  
+  const view = new DataView(buffer);
+  const version = new Uint8Array(buffer.slice(0, 1));
+  
+  const uuid = formatUUID(new Uint8Array(buffer.slice(1, 17)));
+  if (uuid !== userID) {
+    return { hasError: true, message: '无效的用户' };
+  }
+  
+  const optionsLength = view.getUint8(17);
+  const command = view.getUint8(18 + optionsLength);
+
+  let isUDP = false;
+  if (command === 1) {
+
+  } else if (command === 2) {
+
+    isUDP = true;
+  } else {
+    return { hasError: true, message: '不支持的命令，仅支持TCP(01)和UDP(02)' };
+  }
+  
+  let offset = 19 + optionsLength;
+  const port = view.getUint16(offset);
+  offset += 2;
+  
+  const addressType = view.getUint8(offset++);
+  let address = '';
+  
+  switch (addressType) {
+    case 1: // IPv4
+      address = Array.from(new Uint8Array(buffer.slice(offset, offset + 4))).join('.');
+      offset += 4;
+      break;
+      
+    case 2: // 域名
+      const domainLength = view.getUint8(offset++);
+      address = new TextDecoder().decode(buffer.slice(offset, offset + domainLength));
+      offset += domainLength;
+      break;
+      
+    case 3: // IPv6
+      const ipv6 = [];
+      for (let i = 0; i < 8; i++) {
+        ipv6.push(view.getUint16(offset).toString(16).padStart(4, '0'));
+        offset += 2;
+      }
+      address = ipv6.join(':').replace(/(^|:)0+(\w)/g, '$1$2');
+      break;
+      
+    default:
+      return { hasError: true, message: '不支持的地址类型' };
+  }
+  
+  return {
+    hasError: false,
+    addressRemote: address,
+    portRemote: port,
+    rawDataIndex: offset,
+    \u0076\u006c\u0065\u0073\u0073Version: version,
+    isUDP
+  };
+}
+
+function pipeRemoteToWebSocket(remoteSocket, ws, \u0076\u006c\u0065\u0073\u0073Header, retry = null) {
+  let headerSent = false;
+  let hasIncomingData = false;
+  
+  remoteSocket.readable.pipeTo(new WritableStream({
+    write(chunk) {
+      hasIncomingData = true;
+      if (ws.readyState === WS_READY_STATE_OPEN) {
+        if (!headerSent) {
+          const combined = new Uint8Array(\u0076\u006c\u0065\u0073\u0073Header.byteLength + chunk.byteLength);
+          combined.set(new Uint8Array(\u0076\u006c\u0065\u0073\u0073Header), 0);
+          combined.set(new Uint8Array(chunk), \u0076\u006c\u0065\u0073\u0073Header.byteLength);
+          ws.send(combined.buffer);
+          headerSent = true;
+        } else {
+          ws.send(chunk);
+        }
+      }
+    },
+    close() {
+      if (!hasIncomingData && retry) {
+        retry();
+        return;
+      }
+      if (ws.readyState === WS_READY_STATE_OPEN) {
+        ws.close(1000, '正常关闭');
+      }
+    },
+    abort() {
+      closeSocket(remoteSocket);
+    }
+  })).catch(err => {
+    console.error('数据转发错误:', err);
+    closeSocket(remoteSocket);
+    if (ws.readyState === WS_READY_STATE_OPEN) {
+      ws.close(1011, '数据传输错误');
+    }
+  });
+}
+
+function closeSocket(socket) {
+  if (socket) {
+    try {
+      socket.close();
+    } catch (e) {
+    }
+  }
+}
+
+function formatUUID(bytes) {
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+async function handleUDPOutBound(webSocket, \u0076\u006c\u0065\u0073\u0073ResponseHeader) {
+  let is\u0076\u006c\u0065\u0073\u0073HeaderSent = false;
+  const transformStream = new TransformStream({
+    start(controller) {
+    },
+    transform(chunk, controller) {
+      for (let index = 0; index < chunk.byteLength;) {
+        const lengthBuffer = chunk.slice(index, index + 2);
+        const udpPacketLength = new DataView(lengthBuffer).getUint16(0);
+        const udpData = new Uint8Array(
+          chunk.slice(index + 2, index + 2 + udpPacketLength)
+        );
+        index = index + 2 + udpPacketLength;
+        controller.enqueue(udpData);
+      }
+    },
+    flush(controller) {
+    }
+  });
+
+  transformStream.readable.pipeTo(new WritableStream({
+    async write(chunk) {
+      const resp = await fetch('https://1.1.1.1/dns-query',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/dns-message',
+          },
+          body: chunk,
+        })
+      const dnsQueryResult = await resp.arrayBuffer();
+      const udpSize = dnsQueryResult.byteLength;
+      const udpSizeBuffer = new Uint8Array([(udpSize >> 8) & 0xff, udpSize & 0xff]);
+      
+      if (webSocket.readyState === WS_READY_STATE_OPEN) {
+        console.log(`DNS查询成功，DNS消息长度为 ${udpSize}`);
+        if (is\u0076\u006c\u0065\u0073\u0073HeaderSent) {
+          webSocket.send(await new Blob([udpSizeBuffer, dnsQueryResult]).arrayBuffer());
+        } else {
+          webSocket.send(await new Blob([\u0076\u006c\u0065\u0073\u0073ResponseHeader, udpSizeBuffer, dnsQueryResult]).arrayBuffer());
+          is\u0076\u006c\u0065\u0073\u0073HeaderSent = true;
+        }
+      }
+    }
+  })).catch((error) => {
+    console.error('DNS UDP处理错误:', error);
+  });
+
+  const writer = transformStream.writable.getWriter();
+
+  return {
+    write(chunk) {
+      writer.write(chunk);
+    }
+  };
+}
+/**
+ *
+ * @param {string} userID
+ * @param {string | null} hostName
+ * @returns {string}
+ */
+function get\u0076\u006c\u0065\u0073\u0073Config(userID, hostName) {
+  const w\u0076\u006c\u0065\u0073\u0073ws = `\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${CDNIP}:8880?encryption=none&security=none&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#${hostName}`;
+  const p\u0076\u006c\u0065\u0073\u0073wstls = `\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${CDNIP}:8443?encryption=none&security=tls&type=ws&host=${hostName}&sni=${hostName}&fp=random&path=%2F%3Fed%3D2560#${hostName}`;
+  const note = `甬哥博客地址：https://ygkkk.blogspot.com\n甬哥YouTube频道：https://www.youtube.com/@ygkkk\n甬哥TG电报群组：https://t.me/ygkkktg\n甬哥TG电报频道：https://t.me/ygkkktgpd\n\nProxyIP使用nat64自动生成，无需设置`;
+  const ty = `https://${hostName}/${userID}/ty`
+  const cl = `https://${hostName}/${userID}/cl`
+  const sb = `https://${hostName}/${userID}/sb`
+  const pty = `https://${hostName}/${userID}/pty`
+  const pcl = `https://${hostName}/${userID}/pcl`
+  const psb = `https://${hostName}/${userID}/psb`
+
+  const wk\u0076\u006c\u0065\u0073\u0073share = btoa(`\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP1}:${PT1}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V1_${IP1}_${PT1}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP2}:${PT2}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V2_${IP2}_${PT2}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP3}:${PT3}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V3_${IP3}_${PT3}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP4}:${PT4}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V4_${IP4}_${PT4}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP5}:${PT5}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V5_${IP5}_${PT5}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP6}:${PT6}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V6_${IP6}_${PT6}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP7}:${PT7}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V7_${IP7}_${PT7}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP8}:${PT8}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V8_${IP8}_${PT8}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP9}:${PT9}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V9_${IP9}_${PT9}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP10}:${PT10}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V10_${IP10}_${PT10}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP11}:${PT11}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V11_${IP11}_${PT11}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP12}:${PT12}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V12_${IP12}_${PT12}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP13}:${PT13}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V13_${IP13}_${PT13}`);
+
+
+  const pg\u0076\u006c\u0065\u0073\u0073share = btoa(`\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP8}:${PT8}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V8_${IP8}_${PT8}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP9}:${PT9}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V9_${IP9}_${PT9}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP10}:${PT10}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V10_${IP10}_${PT10}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP11}:${PT11}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V11_${IP11}_${PT11}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP12}:${PT12}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V12_${IP12}_${PT12}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP13}:${PT13}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V13_${IP13}_${PT13}`);	
+
 	
-	<p>For online documentation and support please refer to
-	<a href="http://nginx.org/">nginx.org</a>.<br/>
-	Commercial support is available at
-	<a href="http://nginx.com/">nginx.com</a>.</p>
+  const noteshow = note.replace(/\n/g, '<br>');
+  const displayHtml = `
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<style>
+.limited-width {
+    max-width: 200px;
+    overflow: auto;
+    word-wrap: break-word;
+}
+</style>
+</head>
+<script>
+function copyToClipboard(text) {
+  const input = document.createElement('textarea');
+  input.style.position = 'fixed';
+  input.style.opacity = 0;
+  input.value = text;
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('Copy');
+  document.body.removeChild(input);
+  alert('已复制到剪贴板');
+}
+</script>
+`;
+if (hostName.includes("workers.dev")) {
+return `
+<br>
+<br>
+${displayHtml}
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Cloudflare-workers/pages-\u0076\u006c\u0065\u0073\u0073代理脚本 V25.5.27</h1>
+	    <hr>
+            <p>${noteshow}</p>
+            <hr>
+	    <hr>
+	    <hr>
+            <br>
+            <br>
+            <h3>1：CF-workers-\u0076\u006c\u0065\u0073\u0073+ws节点</h3>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>节点特色：</th>
+						<th>单节点链接如下：</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="limited-width">关闭了TLS加密，无视域名阻断</td>
+						<td class="limited-width">${w\u0076\u006c\u0065\u0073\u0073ws}</td>
+						<td><button class="btn btn-primary" onclick="copyToClipboard('${w\u0076\u006c\u0065\u0073\u0073ws}')">点击复制链接</button></td>
+					</tr>
+				</tbody>
+			</table>
+            <h5>客户端参数如下：</h5>
+            <ul>
+                <li>客户端地址(address)：自定义的域名 或者 优选域名 或者 优选IP 或者 反代IP</li>
+                <li>端口(port)：7个http端口可任意选择(80、8080、8880、2052、2082、2086、2095)，或反代IP对应端口</li>
+                <li>用户ID(uuid)：${userID}</li>
+                <li>传输协议(network)：ws 或者 websocket</li>
+                <li>伪装域名(host)：${hostName}</li>
+                <li>路径(path)：/?ed=2560</li>
+		<li>传输安全(TLS)：关闭</li>
+            </ul>
+            <hr>
+			<hr>
+			<hr>
+            <br>
+            <br>
+            <h3>2：CF-workers-\u0076\u006c\u0065\u0073\u0073+ws+tls节点</h3>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>节点特色：</th>
+						<th>单节点链接如下：</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="limited-width">启用了TLS加密，<br>如果客户端支持分片(Fragment)功能，建议开启，防止域名阻断</td>
+						<td class="limited-width">${p\u0076\u006c\u0065\u0073\u0073wstls}</td>	
+						<td><button class="btn btn-primary" onclick="copyToClipboard('${p\u0076\u006c\u0065\u0073\u0073wstls}')">点击复制链接</button></td>
+					</tr>
+				</tbody>
+			</table>
+            <h5>客户端参数如下：</h5>
+            <ul>
+                <li>客户端地址(address)：自定义的域名 或者 优选域名 或者 优选IP 或者 反代IP</li>
+                <li>端口(port)：6个https端口可任意选择(443、8443、2053、2083、2087、2096)，或反代IP对应端口</li>
+                <li>用户ID(uuid)：${userID}</li>
+                <li>传输协议(network)：ws 或者 websocket</li>
+                <li>伪装域名(host)：${hostName}</li>
+                <li>路径(path)：/?ed=2560</li>
+                <li>传输安全(TLS)：开启</li>
+                <li>跳过证书验证(allowlnsecure)：false</li>
+			</ul>
+			<hr>
+			<hr>
+			<hr>
+			<br>	
+			<br>
+			<h3>3：聚合通用、Clash-meta、Sing-box订阅链接如下：</h3>
+			<hr>
+			<p>注意：<br>1、默认每个订阅链接包含TLS+非TLS共13个端口节点<br>2、当前workers域名作为订阅链接，需通过代理进行订阅更新<br>3、如使用的客户端不支持分片功能，则TLS节点不可用</p>
+			<hr>
+
+
+			<table class="table">
+					<thead>
+						<tr>
+							<th>聚合通用分享链接 (可直接导入客户端)：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${wk\u0076\u006c\u0065\u0073\u0073share}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>
+
+
+   
+			<table class="table">
+					<thead>
+						<tr>
+							<th>聚合通用订阅链接：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="limited-width">${ty}</td>	
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${ty}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>	
+
+				<table class="table">
+						<thead>
+							<tr>
+								<th>Clash-meta订阅链接：</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="limited-width">${cl}</td>	
+								<td><button class="btn btn-primary" onclick="copyToClipboard('${cl}')">点击复制链接</button></td>
+							</tr>
+						</tbody>
+					</table>
+
+					<table class="table">
+					<thead>
+						<tr>
+							<th>Sing-box订阅链接：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="limited-width">${sb}</td>	
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${sb}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>
+				<br>
+				<br>
+        </div>
+    </div>
+</div>
+</body>
+`;
+  } else {
+    return `
+<br>
+<br>
+${displayHtml}
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Cloudflare-workers/pages-\u0076\u006c\u0065\u0073\u0073代理脚本 V25.5.27</h1>
+			<hr>
+            <p>${noteshow}</p>
+            <hr>
+			<hr>
+			<hr>
+            <br>
+            <br>
+            <h3>1：CF-pages/workers/自定义域-\u0076\u006c\u0065\u0073\u0073+ws+tls节点</h3>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>节点特色：</th>
+						<th>单节点链接如下：</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="limited-width">启用了TLS加密，<br>如果客户端支持分片(Fragment)功能，可开启，防止域名阻断</td>
+						<td class="limited-width">${p\u0076\u006c\u0065\u0073\u0073wstls}</td>
+						<td><button class="btn btn-primary" onclick="copyToClipboard('${p\u0076\u006c\u0065\u0073\u0073wstls}')">点击复制链接</button></td>
+					</tr>
+				</tbody>
+			</table>
+            <h5>客户端参数如下：</h5>
+            <ul>
+                <li>客户端地址(address)：自定义的域名 或者 优选域名 或者 优选IP 或者 反代IP</li>
+                <li>端口(port)：6个https端口可任意选择(443、8443、2053、2083、2087、2096)，或反代IP对应端口</li>
+                <li>用户ID(uuid)：${userID}</li>
+                <li>传输协议(network)：ws 或者 websocket</li>
+                <li>伪装域名(host)：${hostName}</li>
+                <li>路径(path)：/?ed=2560</li>
+                <li>传输安全(TLS)：开启</li>
+                <li>跳过证书验证(allowlnsecure)：false</li>
+			</ul>
+            <hr>
+			<hr>
+			<hr>
+            <br>
+            <br>
+			<h3>2：聚合通用、Clash-meta、Sing-box订阅链接如下：</h3>
+			<hr>
+			<p>注意：以下订阅链接仅6个TLS端口节点</p>
+			<hr>
+
+
+			<table class="table">
+					<thead>
+						<tr>
+							<th>聚合通用分享链接 (可直接导入客户端)：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${pg\u0076\u006c\u0065\u0073\u0073share}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>
+
+
+
+			<table class="table">
+					<thead>
+						<tr>
+							<th>聚合通用订阅链接：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="limited-width">${pty}</td>	
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${pty}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>	
+
+				<table class="table">
+						<thead>
+							<tr>
+								<th>Clash-meta订阅链接：</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="limited-width">${pcl}</td>	
+								<td><button class="btn btn-primary" onclick="copyToClipboard('${pcl}')">点击复制链接</button></td>
+							</tr>
+						</tbody>
+					</table>
+
+					<table class="table">
+					<thead>
+						<tr>
+							<th>Sing-box订阅链接：</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="limited-width">${psb}</td>	
+							<td><button class="btn btn-primary" onclick="copyToClipboard('${psb}')">点击复制链接</button></td>
+						</tr>
+					</tbody>
+				</table>
+				<br>
+				<br>
+        </div>
+    </div>
+</div>
+</body>
+`;
+  }
+}
+
+function gettyConfig(userID, hostName) {
+	const \u0076\u006c\u0065\u0073\u0073share = btoa(`\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP1}:${PT1}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V1_${IP1}_${PT1}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP2}:${PT2}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V2_${IP2}_${PT2}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP3}:${PT3}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V3_${IP3}_${PT3}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP4}:${PT4}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V4_${IP4}_${PT4}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP5}:${PT5}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V5_${IP5}_${PT5}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP6}:${PT6}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V6_${IP6}_${PT6}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP7}:${PT7}?encryption=none&security=none&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V7_${IP7}_${PT7}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP8}:${PT8}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V8_${IP8}_${PT8}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP9}:${PT9}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V9_${IP9}_${PT9}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP10}:${PT10}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V10_${IP10}_${PT10}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP11}:${PT11}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V11_${IP11}_${PT11}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP12}:${PT12}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V12_${IP12}_${PT12}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP13}:${PT13}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V13_${IP13}_${PT13}`);
+		return `${\u0076\u006c\u0065\u0073\u0073share}`
+	}
+
+function getclConfig(userID, hostName) {
+return `
+port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+unified-delay: true
+global-client-fingerprint: chrome
+dns:
+  enable: false
+  listen: :53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver: 
+    - 223.5.5.5
+    - 114.114.114.114
+    - 8.8.8.8
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://1.0.0.1/dns-query
+    - tls://dns.google
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+proxies:
+- name: CF_V1_${IP1}_${PT1}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP1.replace(/[\[\]]/g, '')}
+  port: ${PT1}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V2_${IP2}_${PT2}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP2.replace(/[\[\]]/g, '')}
+  port: ${PT2}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V3_${IP3}_${PT3}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP3.replace(/[\[\]]/g, '')}
+  port: ${PT3}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V4_${IP4}_${PT4}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP4.replace(/[\[\]]/g, '')}
+  port: ${PT4}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V5_${IP5}_${PT5}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP5.replace(/[\[\]]/g, '')}
+  port: ${PT5}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V6_${IP6}_${PT6}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP6.replace(/[\[\]]/g, '')}
+  port: ${PT6}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V7_${IP7}_${PT7}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP7.replace(/[\[\]]/g, '')}
+  port: ${PT7}
+  uuid: ${userID}
+  udp: false
+  tls: false
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V8_${IP8}_${PT8}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP8.replace(/[\[\]]/g, '')}
+  port: ${PT8}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V9_${IP9}_${PT9}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP9.replace(/[\[\]]/g, '')}
+  port: ${PT9}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V10_${IP10}_${PT10}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP10.replace(/[\[\]]/g, '')}
+  port: ${PT10}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V11_${IP11}_${PT11}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP11.replace(/[\[\]]/g, '')}
+  port: ${PT11}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V12_${IP12}_${PT12}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP12.replace(/[\[\]]/g, '')}
+  port: ${PT12}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V13_${IP13}_${PT13}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP13.replace(/[\[\]]/g, '')}
+  port: ${PT13}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+proxy-groups:
+- name: 负载均衡
+  type: load-balance
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  proxies:
+    - CF_V1_${IP1}_${PT1}
+    - CF_V2_${IP2}_${PT2}
+    - CF_V3_${IP3}_${PT3}
+    - CF_V4_${IP4}_${PT4}
+    - CF_V5_${IP5}_${PT5}
+    - CF_V6_${IP6}_${PT6}
+    - CF_V7_${IP7}_${PT7}
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+- name: 自动选择
+  type: url-test
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+  proxies:
+    - CF_V1_${IP1}_${PT1}
+    - CF_V2_${IP2}_${PT2}
+    - CF_V3_${IP3}_${PT3}
+    - CF_V4_${IP4}_${PT4}
+    - CF_V5_${IP5}_${PT5}
+    - CF_V6_${IP6}_${PT6}
+    - CF_V7_${IP7}_${PT7}
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+- name: 🌍选择代理
+  type: select
+  proxies:
+    - 负载均衡
+    - 自动选择
+    - DIRECT
+    - CF_V1_${IP1}_${PT1}
+    - CF_V2_${IP2}_${PT2}
+    - CF_V3_${IP3}_${PT3}
+    - CF_V4_${IP4}_${PT4}
+    - CF_V5_${IP5}_${PT5}
+    - CF_V6_${IP6}_${PT6}
+    - CF_V7_${IP7}_${PT7}
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+rules:
+  - GEOIP,LAN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,🌍选择代理`
+}
 	
-	<p><em>Thank you for using nginx.</em></p>
-	</body>
-	</html>
-	`
-	return text;
-}
-
-async function sendMessage(type, ip, add_data = "") {
-	if (BotToken !== '' && ChatID !== '') {
-		let msg = "";
-		const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
-		if (response.status == 200) {
-			const ipInfo = await response.json();
-			msg = `${type}\nIP: ${ip}\n国家: ${ipInfo.country}\n<tg-spoiler>城市: ${ipInfo.city}\n组织: ${ipInfo.org}\nASN: ${ipInfo.as}\n${add_data}`;
-		} else {
-			msg = `${type}\nIP: ${ip}\n<tg-spoiler>${add_data}`;
+function getsbConfig(userID, hostName) {
+return `{
+	  "log": {
+		"disabled": false,
+		"level": "info",
+		"timestamp": true
+	  },
+	  "experimental": {
+		"clash_api": {
+		  "external_controller": "127.0.0.1:9090",
+		  "external_ui": "ui",
+		  "external_ui_download_url": "",
+		  "external_ui_download_detour": "",
+		  "secret": "",
+		  "default_mode": "Rule"
+		},
+		"cache_file": {
+		  "enabled": true,
+		  "path": "cache.db",
+		  "store_fakeip": true
 		}
-
-		let url = "https://api.telegram.org/bot" + BotToken + "/sendMessage?chat_id=" + ChatID + "&parse_mode=HTML&text=" + encodeURIComponent(msg);
-		return fetch(url, {
-			method: 'get',
-			headers: {
-				'Accept': 'text/html,application/xhtml+xml,application/xml;',
-				'Accept-Encoding': 'gzip, deflate, br',
-				'User-Agent': 'Mozilla/5.0 Chrome/90.0.4430.72'
+	  },
+	  "dns": {
+		"servers": [
+		  {
+			"tag": "proxydns",
+			"address": "tls://8.8.8.8/dns-query",
+			"detour": "select"
+		  },
+		  {
+			"tag": "localdns",
+			"address": "h3://223.5.5.5/dns-query",
+			"detour": "direct"
+		  },
+		  {
+			"tag": "dns_fakeip",
+			"address": "fakeip"
+		  }
+		],
+		"rules": [
+		  {
+			"outbound": "any",
+			"server": "localdns",
+			"disable_cache": true
+		  },
+		  {
+			"clash_mode": "Global",
+			"server": "proxydns"
+		  },
+		  {
+			"clash_mode": "Direct",
+			"server": "localdns"
+		  },
+		  {
+			"rule_set": "geosite-cn",
+			"server": "localdns"
+		  },
+		  {
+			"rule_set": "geosite-geolocation-!cn",
+			"server": "proxydns"
+		  },
+		  {
+			"rule_set": "geosite-geolocation-!cn",
+			"query_type": [
+			  "A",
+			  "AAAA"
+			],
+			"server": "dns_fakeip"
+		  }
+		],
+		"fakeip": {
+		  "enabled": true,
+		  "inet4_range": "198.18.0.0/15",
+		  "inet6_range": "fc00::/18"
+		},
+		"independent_cache": true,
+		"final": "proxydns"
+	  },
+	  "inbounds": [
+		{
+		  "type": "tun",
+                  "tag": "tun-in",
+		  "address": [
+                    "172.19.0.1/30",
+		    "fd00::1/126"
+      ],
+		  "auto_route": true,
+		  "strict_route": true,
+		  "sniff": true,
+		  "sniff_override_destination": true,
+		  "domain_strategy": "prefer_ipv4"
+		}
+	  ],
+	  "outbounds": [
+		{
+		  "tag": "select",
+		  "type": "selector",
+		  "default": "auto",
+		  "outbounds": [
+			"auto",
+			"CF_V1_${IP1}_${PT1}",
+			"CF_V2_${IP2}_${PT2}",
+			"CF_V3_${IP3}_${PT3}",
+			"CF_V4_${IP4}_${PT4}",
+			"CF_V5_${IP5}_${PT5}",
+			"CF_V6_${IP6}_${PT6}",
+			"CF_V7_${IP7}_${PT7}",
+			"CF_V8_${IP8}_${PT8}",
+			"CF_V9_${IP9}_${PT9}",
+			"CF_V10_${IP10}_${PT10}",
+			"CF_V11_${IP11}_${PT11}",
+			"CF_V12_${IP12}_${PT12}",
+			"CF_V13_${IP13}_${PT13}"
+		  ]
+		},
+		{
+		  "server": "${IP1}",
+		  "server_port": ${PT1},
+		  "tag": "CF_V1_${IP1}_${PT1}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP2}",
+		  "server_port": ${PT2},
+		  "tag": "CF_V2_${IP2}_${PT2}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP3}",
+		  "server_port": ${PT3},
+		  "tag": "CF_V3_${IP3}_${PT3}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP4}",
+		  "server_port": ${PT4},
+		  "tag": "CF_V4_${IP4}_${PT4}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP5}",
+		  "server_port": ${PT5},
+		  "tag": "CF_V5_${IP5}_${PT5}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP6}",
+		  "server_port": ${PT6},
+		  "tag": "CF_V6_${IP6}_${PT6}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP7}",
+		  "server_port": ${PT7},
+		  "tag": "CF_V7_${IP7}_${PT7}",
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{     
+		  "server": "${IP8}",
+		  "server_port": ${PT8},
+		  "tag": "CF_V8_${IP8}_${PT8}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
 			}
-		});
-	}
-}
-
-function base64Decode(str) {
-	const bytes = new Uint8Array(atob(str).split('').map(c => c.charCodeAt(0)));
-	const decoder = new TextDecoder('utf-8');
-	return decoder.decode(bytes);
-}
-
-async function MD5MD5(text) {
-	const encoder = new TextEncoder();
-
-	const firstPass = await crypto.subtle.digest('MD5', encoder.encode(text));
-	const firstPassArray = Array.from(new Uint8Array(firstPass));
-	const firstHex = firstPassArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-	const secondPass = await crypto.subtle.digest('MD5', encoder.encode(firstHex.slice(7, 27)));
-	const secondPassArray = Array.from(new Uint8Array(secondPass));
-	const secondHex = secondPassArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-	return secondHex.toLowerCase();
-}
-
-function clashFix(content) {
-	if (content.includes('wireguard') && !content.includes('remote-dns-resolve')) {
-		let lines;
-		if (content.includes('\r\n')) {
-			lines = content.split('\r\n');
-		} else {
-			lines = content.split('\n');
-		}
-
-		let result = "";
-		for (let line of lines) {
-			if (line.includes('type: wireguard')) {
-				const 备改内容 = `, mtu: 1280, udp: true`;
-				const 正确内容 = `, mtu: 1280, remote-dns-resolve: true, udp: true`;
-				result += line.replace(new RegExp(备改内容, 'g'), 正确内容) + '\n';
-			} else {
-				result += line + '\n';
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP9}",
+		  "server_port": ${PT9},
+		  "tag": "CF_V9_${IP9}_${PT9}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
 			}
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP10}",
+		  "server_port": ${PT10},
+		  "tag": "CF_V10_${IP10}_${PT10}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
+			}
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP11}",
+		  "server_port": ${PT11},
+		  "tag": "CF_V11_${IP11}_${PT11}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
+			}
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP12}",
+		  "server_port": ${PT12},
+		  "tag": "CF_V12_${IP12}_${PT12}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
+			}
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "server": "${IP13}",
+		  "server_port": ${PT13},
+		  "tag": "CF_V13_${IP13}_${PT13}",
+		  "tls": {
+			"enabled": true,
+			"server_name": "${hostName}",
+			"insecure": false,
+			"utls": {
+			  "enabled": true,
+			  "fingerprint": "chrome"
+			}
+		  },
+		  "packet_encoding": "packetaddr",
+		  "transport": {
+			"headers": {
+			  "Host": [
+				"${hostName}"
+			  ]
+			},
+			"path": "/?ed=2560",
+			"type": "ws"
+		  },
+		  "type": "\u0076\u006c\u0065\u0073\u0073",
+		  "uuid": "${userID}"
+		},
+		{
+		  "tag": "direct",
+		  "type": "direct"
+		},
+		{
+		  "tag": "auto",
+		  "type": "urltest",
+		  "outbounds": [
+			"CF_V1_${IP1}_${PT1}",
+			"CF_V2_${IP2}_${PT2}",
+			"CF_V3_${IP3}_${PT3}",
+			"CF_V4_${IP4}_${PT4}",
+			"CF_V5_${IP5}_${PT5}",
+			"CF_V6_${IP6}_${PT6}",
+			"CF_V7_${IP7}_${PT7}",
+			"CF_V8_${IP8}_${PT8}",
+			"CF_V9_${IP9}_${PT9}",
+			"CF_V10_${IP10}_${PT10}",
+			"CF_V11_${IP11}_${PT11}",
+			"CF_V12_${IP12}_${PT12}",
+			"CF_V13_${IP13}_${PT13}"
+		  ],
+		  "url": "https://www.gstatic.com/generate_204",
+		  "interval": "1m",
+		  "tolerance": 50,
+		  "interrupt_exist_connections": false
 		}
-
-		content = result;
-	}
-	return content;
+	  ],
+	  "route": {
+		"rule_set": [
+		  {
+			"tag": "geosite-geolocation-!cn",
+			"type": "remote",
+			"format": "binary",
+			"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-!cn.srs",
+			"download_detour": "select",
+			"update_interval": "1d"
+		  },
+		  {
+			"tag": "geosite-cn",
+			"type": "remote",
+			"format": "binary",
+			"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-cn.srs",
+			"download_detour": "select",
+			"update_interval": "1d"
+		  },
+		  {
+			"tag": "geoip-cn",
+			"type": "remote",
+			"format": "binary",
+			"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cn.srs",
+			"download_detour": "select",
+			"update_interval": "1d"
+		  }
+		],
+		"auto_detect_interface": true,
+		"final": "select",
+		"rules": [
+                         {
+                        "inbound": "tun-in",
+                        "action": "sniff"
+                         },
+                          {
+                        "protocol": "dns",
+                           "action": "hijack-dns"
+                         },
+                        {
+                        "port": 443,
+                        "network": "udp",
+                        "action": "reject"
+                         },
+		  {
+			"clash_mode": "Direct",
+			"outbound": "direct"
+		  },
+		  {
+			"clash_mode": "Global",
+			"outbound": "select"
+		  },
+		  {
+			"rule_set": "geoip-cn",
+			"outbound": "direct"
+		  },
+		  {
+			"rule_set": "geosite-cn",
+			"outbound": "direct"
+		  },
+		  {
+			"ip_is_private": true,
+			"outbound": "direct"
+		  },
+		  {
+			"rule_set": "geosite-geolocation-!cn",
+			"outbound": "select"
+		  }
+		]
+	  },
+	  "ntp": {
+		"enabled": true,
+		"server": "time.apple.com",
+		"server_port": 123,
+		"interval": "30m",
+		"detour": "direct"
+	  }
+	}`
 }
 
-async function proxyURL(proxyURL, url) {
-	const URLs = await ADD(proxyURL);
-	const fullURL = URLs[Math.floor(Math.random() * URLs.length)];
-
-	// 解析目标 URL
-	let parsedURL = new URL(fullURL);
-	console.log(parsedURL);
-	// 提取并可能修改 URL 组件
-	let URLProtocol = parsedURL.protocol.slice(0, -1) || 'https';
-	let URLHostname = parsedURL.hostname;
-	let URLPathname = parsedURL.pathname;
-	let URLSearch = parsedURL.search;
-
-	// 处理 pathname
-	if (URLPathname.charAt(URLPathname.length - 1) == '/') {
-		URLPathname = URLPathname.slice(0, -1);
+function getptyConfig(userID, hostName) {
+	const \u0076\u006c\u0065\u0073\u0073share = btoa(`\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP8}:${PT8}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V8_${IP8}_${PT8}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP9}:${PT9}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V9_${IP9}_${PT9}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP10}:${PT10}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V10_${IP10}_${PT10}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP11}:${PT11}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V11_${IP11}_${PT11}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP12}:${PT12}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V12_${IP12}_${PT12}\n\u0076\u006c\u0065\u0073\u0073\u003A//${userID}\u0040${IP13}:${PT13}?encryption=none&security=tls&sni=${hostName}&fp=randomized&type=ws&host=${hostName}&path=%2F%3Fed%3D2560#CF_V13_${IP13}_${PT13}`);	
+		return `${\u0076\u006c\u0065\u0073\u0073share}`
 	}
-	URLPathname += url.pathname;
+	
+function getpclConfig(userID, hostName) {
+return `
+port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+unified-delay: true
+global-client-fingerprint: chrome
+dns:
+  enable: false
+  listen: :53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver: 
+    - 223.5.5.5
+    - 114.114.114.114
+    - 8.8.8.8
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  fallback:
+    - https://1.0.0.1/dns-query
+    - tls://dns.google
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
 
-	// 构建新的 URL
-	let newURL = `${URLProtocol}://${URLHostname}${URLPathname}${URLSearch}`;
+proxies:
+- name: CF_V8_${IP8}_${PT8}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP8.replace(/[\[\]]/g, '')}
+  port: ${PT8}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
 
-	// 反向代理请求
-	let response = await fetch(newURL);
+- name: CF_V9_${IP9}_${PT9}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP9.replace(/[\[\]]/g, '')}
+  port: ${PT9}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
 
-	// 创建新的响应
-	let newResponse = new Response(response.body, {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers
-	});
+- name: CF_V10_${IP10}_${PT10}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP10.replace(/[\[\]]/g, '')}
+  port: ${PT10}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
 
-	// 添加自定义头部，包含 URL 信息
-	//newResponse.headers.set('X-Proxied-By', 'Cloudflare Worker');
-	//newResponse.headers.set('X-Original-URL', fullURL);
-	newResponse.headers.set('X-New-URL', newURL);
+- name: CF_V11_${IP11}_${PT11}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP11.replace(/[\[\]]/g, '')}
+  port: ${PT11}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
 
-	return newResponse;
+- name: CF_V12_${IP12}_${PT12}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP12.replace(/[\[\]]/g, '')}
+  port: ${PT12}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+- name: CF_V13_${IP13}_${PT13}
+  type: \u0076\u006c\u0065\u0073\u0073
+  server: ${IP13.replace(/[\[\]]/g, '')}
+  port: ${PT13}
+  uuid: ${userID}
+  udp: false
+  tls: true
+  network: ws
+  servername: ${hostName}
+  ws-opts:
+    path: "/?ed=2560"
+    headers:
+      Host: ${hostName}
+
+proxy-groups:
+- name: 负载均衡
+  type: load-balance
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  proxies:
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+- name: 自动选择
+  type: url-test
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+  proxies:
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+- name: 🌍选择代理
+  type: select
+  proxies:
+    - 负载均衡
+    - 自动选择
+    - DIRECT
+    - CF_V8_${IP8}_${PT8}
+    - CF_V9_${IP9}_${PT9}
+    - CF_V10_${IP10}_${PT10}
+    - CF_V11_${IP11}_${PT11}
+    - CF_V12_${IP12}_${PT12}
+    - CF_V13_${IP13}_${PT13}
+
+rules:
+  - GEOIP,LAN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,🌍选择代理`
 }
-
-async function getSUB(api, request, 追加UA, userAgentHeader) {
-	if (!api || api.length === 0) {
-		return [];
-	} else api = [...new Set(api)]; // 去重
-	let newapi = "";
-	let 订阅转换URLs = "";
-	let 异常订阅 = "";
-	const controller = new AbortController(); // 创建一个AbortController实例，用于取消请求
-	const timeout = setTimeout(() => {
-		controller.abort(); // 2秒后取消所有请求
-	}, 2000);
-
-	try {
-		// 使用Promise.allSettled等待所有API请求完成，无论成功或失败
-		const responses = await Promise.allSettled(api.map(apiUrl => getUrl(request, apiUrl, 追加UA, userAgentHeader).then(response => response.ok ? response.text() : Promise.reject(response))));
-
-		// 遍历所有响应
-		const modifiedResponses = responses.map((response, index) => {
-			// 检查是否请求成功
-			if (response.status === 'rejected') {
-				const reason = response.reason;
-				if (reason && reason.name === 'AbortError') {
-					return {
-						status: '超时',
-						value: null,
-						apiUrl: api[index] // 将原始的apiUrl添加到返回对象中
-					};
+		
+function getpsbConfig(userID, hostName) {
+return `{
+		  "log": {
+			"disabled": false,
+			"level": "info",
+			"timestamp": true
+		  },
+		  "experimental": {
+			"clash_api": {
+			  "external_controller": "127.0.0.1:9090",
+			  "external_ui": "ui",
+			  "external_ui_download_url": "",
+			  "external_ui_download_detour": "",
+			  "secret": "",
+			  "default_mode": "Rule"
+			},
+			"cache_file": {
+			  "enabled": true,
+			  "path": "cache.db",
+			  "store_fakeip": true
+			}
+		  },
+		  "dns": {
+			"servers": [
+			  {
+				"tag": "proxydns",
+				"address": "tls://8.8.8.8/dns-query",
+				"detour": "select"
+			  },
+			  {
+				"tag": "localdns",
+				"address": "h3://223.5.5.5/dns-query",
+				"detour": "direct"
+			  },
+			  {
+				"tag": "dns_fakeip",
+				"address": "fakeip"
+			  }
+			],
+			"rules": [
+			  {
+				"outbound": "any",
+				"server": "localdns",
+				"disable_cache": true
+			  },
+			  {
+				"clash_mode": "Global",
+				"server": "proxydns"
+			  },
+			  {
+				"clash_mode": "Direct",
+				"server": "localdns"
+			  },
+			  {
+				"rule_set": "geosite-cn",
+				"server": "localdns"
+			  },
+			  {
+				"rule_set": "geosite-geolocation-!cn",
+				"server": "proxydns"
+			  },
+			  {
+				"rule_set": "geosite-geolocation-!cn",
+				"query_type": [
+				  "A",
+				  "AAAA"
+				],
+				"server": "dns_fakeip"
+			  }
+			],
+			"fakeip": {
+			  "enabled": true,
+			  "inet4_range": "198.18.0.0/15",
+			  "inet6_range": "fc00::/18"
+			},
+			"independent_cache": true,
+			"final": "proxydns"
+		  },
+		  "inbounds": [
+			{
+			  "type": "tun",
+                        "tag": "tun-in",
+		  "address": [
+                    "172.19.0.1/30",
+		    "fd00::1/126"
+      ],
+			  "auto_route": true,
+			  "strict_route": true,
+			  "sniff": true,
+			  "sniff_override_destination": true,
+			  "domain_strategy": "prefer_ipv4"
+			}
+		  ],
+		  "outbounds": [
+			{
+			  "tag": "select",
+			  "type": "selector",
+			  "default": "auto",
+			  "outbounds": [
+				"auto",
+				"CF_V8_${IP8}_${PT8}",
+				"CF_V9_${IP9}_${PT9}",
+				"CF_V10_${IP10}_${PT10}",
+				"CF_V11_${IP11}_${PT11}",
+				"CF_V12_${IP12}_${PT12}",
+				"CF_V13_${IP13}_${PT13}"
+			  ]
+			},
+			{
+			  "server": "${IP8}",
+			  "server_port": ${PT8},
+			  "tag": "CF_V8_${IP8}_${PT8}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
 				}
-				console.error(`请求失败: ${api[index]}, 错误信息: ${reason.status} ${reason.statusText}`);
-				return {
-					status: '请求失败',
-					value: null,
-					apiUrl: api[index] // 将原始的apiUrl添加到返回对象中
-				};
-			}
-			return {
-				status: response.status,
-				value: response.value,
-				apiUrl: api[index] // 将原始的apiUrl添加到返回对象中
-			};
-		});
-
-		console.log(modifiedResponses); // 输出修改后的响应数组
-
-		for (const response of modifiedResponses) {
-			// 检查响应状态是否为'fulfilled'
-			if (response.status === 'fulfilled') {
-				const content = await response.value || 'null'; // 获取响应的内容
-				if (content.includes('proxies:')) {
-					//console.log('Clash订阅: ' + response.apiUrl);
-					订阅转换URLs += "|" + response.apiUrl; // Clash 配置
-				} else if (content.includes('outbounds"') && content.includes('inbounds"')) {
-					//console.log('Singbox订阅: ' + response.apiUrl);
-					订阅转换URLs += "|" + response.apiUrl; // Singbox 配置
-				} else if (content.includes('://')) {
-					//console.log('明文订阅: ' + response.apiUrl);
-					newapi += content + '\n'; // 追加内容
-				} else if (isValidBase64(content)) {
-					//console.log('Base64订阅: ' + response.apiUrl);
-					newapi += base64Decode(content) + '\n'; // 解码并追加内容
-				} else {
-					const 异常订阅LINK = `trojan://CMLiussss@127.0.0.1:8888?security=tls&allowInsecure=1&type=tcp&headerType=none#%E5%BC%82%E5%B8%B8%E8%AE%A2%E9%98%85%20${response.apiUrl.split('://')[1].split('/')[0]}`;
-					console.log('异常订阅: ' + 异常订阅LINK);
-					异常订阅 += `${异常订阅LINK}\n`;
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "server": "${IP9}",
+			  "server_port": ${PT9},
+			  "tag": "CF_V9_${IP9}_${PT9}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
 				}
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "server": "${IP10}",
+			  "server_port": ${PT10},
+			  "tag": "CF_V10_${IP10}_${PT10}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
+				}
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "server": "${IP11}",
+			  "server_port": ${PT11},
+			  "tag": "CF_V11_${IP11}_${PT11}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
+				}
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "server": "${IP12}",
+			  "server_port": ${PT12},
+			  "tag": "CF_V12_${IP12}_${PT12}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
+				}
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "server": "${IP13}",
+			  "server_port": ${PT13},
+			  "tag": "CF_V13_${IP13}_${PT13}",
+			  "tls": {
+				"enabled": true,
+				"server_name": "${hostName}",
+				"insecure": false,
+				"utls": {
+				  "enabled": true,
+				  "fingerprint": "chrome"
+				}
+			  },
+			  "packet_encoding": "packetaddr",
+			  "transport": {
+				"headers": {
+				  "Host": [
+					"${hostName}"
+				  ]
+				},
+				"path": "/?ed=2560",
+				"type": "ws"
+			  },
+			  "type": "\u0076\u006c\u0065\u0073\u0073",
+			  "uuid": "${userID}"
+			},
+			{
+			  "tag": "direct",
+			  "type": "direct"
+			},
+			{
+			  "tag": "auto",
+			  "type": "urltest",
+			  "outbounds": [
+				"CF_V8_${IP8}_${PT8}",
+				"CF_V9_${IP9}_${PT9}",
+				"CF_V10_${IP10}_${PT10}",
+				"CF_V11_${IP11}_${PT11}",
+				"CF_V12_${IP12}_${PT12}",
+				"CF_V13_${IP13}_${PT13}"
+			  ],
+			  "url": "https://www.gstatic.com/generate_204",
+			  "interval": "1m",
+			  "tolerance": 50,
+			  "interrupt_exist_connections": false
 			}
-		}
-	} catch (error) {
-		console.error(error); // 捕获并输出错误信息
-	} finally {
-		clearTimeout(timeout); // 清除定时器
-	}
-
-	const 订阅内容 = await ADD(newapi + 异常订阅); // 将处理后的内容转换为数组
-	// 返回处理后的结果
-	return [订阅内容, 订阅转换URLs];
-}
-
-async function getUrl(request, targetUrl, 追加UA, userAgentHeader) {
-	// 设置自定义 User-Agent
-	const newHeaders = new Headers(request.headers);
-	newHeaders.set("User-Agent", `${atob('djJyYXlOLzYuNDU=')} cmliu/CF-Workers-SUB ${追加UA}(${userAgentHeader})`);
-
-	// 构建新的请求对象
-	const modifiedRequest = new Request(targetUrl, {
-		method: request.method,
-		headers: newHeaders,
-		body: request.method === "GET" ? null : request.body,
-		redirect: "follow",
-		cf: {
-			// 忽略SSL证书验证
-			insecureSkipVerify: true,
-			// 允许自签名证书
-			allowUntrusted: true,
-			// 禁用证书验证
-			validateCertificate: false
-		}
-	});
-
-	// 输出请求的详细信息
-	console.log(`请求URL: ${targetUrl}`);
-	console.log(`请求头: ${JSON.stringify([...newHeaders])}`);
-	console.log(`请求方法: ${request.method}`);
-	console.log(`请求体: ${request.method === "GET" ? null : request.body}`);
-
-	// 发送请求并返回响应
-	return fetch(modifiedRequest);
-}
-
-function isValidBase64(str) {
-	// 先移除所有空白字符(空格、换行、回车等)
-	const cleanStr = str.replace(/\s/g, '');
-	const base64Regex = /^[A-Za-z0-9+/=]+$/;
-	return base64Regex.test(cleanStr);
-}
-
-async function 迁移地址列表(env, txt = 'ADD.txt') {
-	const 旧数据 = await env.KV.get(`/${txt}`);
-	const 新数据 = await env.KV.get(txt);
-
-	if (旧数据 && !新数据) {
-		// 写入新位置
-		await env.KV.put(txt, 旧数据);
-		// 删除旧数据
-		await env.KV.delete(`/${txt}`);
-		return true;
-	}
-	return false;
-}
-
-async function KV(request, env, txt = 'ADD.txt', guest) {
-	const url = new URL(request.url);
-	try {
-		// POST请求处理
-		if (request.method === "POST") {
-			if (!env.KV) return new Response("未绑定KV空间", { status: 400 });
-			try {
-				const content = await request.text();
-				await env.KV.put(txt, content);
-				return new Response("保存成功");
-			} catch (error) {
-				console.error('保存KV时发生错误:', error);
-				return new Response("保存失败: " + error.message, { status: 500 });
-			}
-		}
-
-		// GET请求部分
-		let content = '';
-		let hasKV = !!env.KV;
-
-		if (hasKV) {
-			try {
-				content = await env.KV.get(txt) || '';
-			} catch (error) {
-				console.error('读取KV时发生错误:', error);
-				content = '读取数据时发生错误: ' + error.message;
-			}
-		}
-
-		const html = `
-			<!DOCTYPE html>
-			<html>
-				<head>
-					<title>${FileName} 订阅编辑</title>
-					<meta charset="utf-8">
-					<meta name="viewport" content="width=device-width, initial-scale=1">
-					<style>
-						body {
-							margin: 0;
-							padding: 15px; /* 调整padding */
-							box-sizing: border-box;
-							font-size: 13px; /* 设置全局字体大小 */
-						}
-						.editor-container {
-							width: 100%;
-							max-width: 100%;
-							margin: 0 auto;
-						}
-						.editor {
-							width: 100%;
-							height: 300px; /* 调整高度 */
-							margin: 15px 0; /* 调整margin */
-							padding: 10px; /* 调整padding */
-							box-sizing: border-box;
-							border: 1px solid #ccc;
-							border-radius: 4px;
-							font-size: 13px;
-							line-height: 1.5;
-							overflow-y: auto;
-							resize: none;
-						}
-						.save-container {
-							margin-top: 8px; /* 调整margin */
-							display: flex;
-							align-items: center;
-							gap: 10px; /* 调整gap */
-						}
-						.save-btn, .back-btn {
-							padding: 6px 15px; /* 调整padding */
-							color: white;
-							border: none;
-							border-radius: 4px;
-							cursor: pointer;
-						}
-						.save-btn {
-							background: #4CAF50;
-						}
-						.save-btn:hover {
-							background: #45a049;
-						}
-						.back-btn {
-							background: #666;
-						}
-						.back-btn:hover {
-							background: #555;
-						}
-						.save-status {
-							color: #666;
-						}
-					</style>
-					<script src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"></script>
-				</head>
-				<body>
-					################################################################<br>
-					Subscribe / sub 订阅地址, 点击链接自动 <strong>复制订阅链接</strong> 并 <strong>生成订阅二维码</strong> <br>
-					---------------------------------------------------------------<br>
-					自适应订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?sub','qrcode_0')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}</a><br>
-					<div id="qrcode_0" style="margin: 10px 10px 10px 10px;"></div>
-					Base64订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?b64','qrcode_1')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}?b64</a><br>
-					<div id="qrcode_1" style="margin: 10px 10px 10px 10px;"></div>
-					clash订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?clash','qrcode_2')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}?clash</a><br>
-					<div id="qrcode_2" style="margin: 10px 10px 10px 10px;"></div>
-					singbox订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?sb','qrcode_3')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}?sb</a><br>
-					<div id="qrcode_3" style="margin: 10px 10px 10px 10px;"></div>
-					surge订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?surge','qrcode_4')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}?surge</a><br>
-					<div id="qrcode_4" style="margin: 10px 10px 10px 10px;"></div>
-					loon订阅地址:<br>
-					<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${mytoken}?loon','qrcode_5')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${mytoken}?loon</a><br>
-					<div id="qrcode_5" style="margin: 10px 10px 10px 10px;"></div>
-					&nbsp;&nbsp;<strong><a href="javascript:void(0);" id="noticeToggle" onclick="toggleNotice()">查看访客订阅∨</a></strong><br>
-					<div id="noticeContent" class="notice-content" style="display: none;">
-						---------------------------------------------------------------<br>
-						访客订阅只能使用订阅功能，无法查看配置页！<br>
-						GUEST（访客订阅TOKEN）: <strong>${guest}</strong><br>
-						---------------------------------------------------------------<br>
-						自适应订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}','guest_0')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}</a><br>
-						<div id="guest_0" style="margin: 10px 10px 10px 10px;"></div>
-						Base64订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}&b64','guest_1')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}&b64</a><br>
-						<div id="guest_1" style="margin: 10px 10px 10px 10px;"></div>
-						clash订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}&clash','guest_2')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}&clash</a><br>
-						<div id="guest_2" style="margin: 10px 10px 10px 10px;"></div>
-						singbox订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}&sb','guest_3')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}&sb</a><br>
-						<div id="guest_3" style="margin: 10px 10px 10px 10px;"></div>
-						surge订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}&surge','guest_4')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}&surge</a><br>
-						<div id="guest_4" style="margin: 10px 10px 10px 10px;"></div>
-						loon订阅地址:<br>
-						<a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/sub?token=${guest}&loon','guest_5')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/sub?token=${guest}&loon</a><br>
-						<div id="guest_5" style="margin: 10px 10px 10px 10px;"></div>
-					</div>
-					---------------------------------------------------------------<br>
-					################################################################<br>
-					订阅转换配置<br>
-					---------------------------------------------------------------<br>
-					SUBAPI（订阅转换后端）: <strong>${subProtocol}://${subConverter}</strong><br>
-					SUBCONFIG（订阅转换配置文件）: <strong>${subConfig}</strong><br>
-					---------------------------------------------------------------<br>
-					################################################################<br>
-					${FileName} 汇聚订阅编辑: 
-					<div class="editor-container">
-						${hasKV ? `
-						<textarea class="editor" 
-							placeholder="${decodeURIComponent(atob('TElOSyVFNyVBNCVCQSVFNCVCRSU4QiVFRiVCQyU4OCVFNCVCOCU4MCVFOCVBMSU4QyVFNCVCOCU4MCVFNCVCOCVBQSVFOCU4QSU4MiVFNyU4MiVCOSVFOSU5MyVCRSVFNiU4RSVBNSVFNSU4RCVCMyVFNSU4RiVBRiVFRiVCQyU4OSVFRiVCQyU5QQp2bGVzcyUzQSUyRiUyRjI0NmFhNzk1LTA2MzctNGY0Yy04ZjY0LTJjOGZiMjRjMWJhZCU0MDEyNy4wLjAuMSUzQTEyMzQlM0ZlbmNyeXB0aW9uJTNEbm9uZSUyNnNlY3VyaXR5JTNEdGxzJTI2c25pJTNEVEcuQ01MaXVzc3NzLmxvc2V5b3VyaXAuY29tJTI2YWxsb3dJbnNlY3VyZSUzRDElMjZ0eXBlJTNEd3MlMjZob3N0JTNEVEcuQ01MaXVzc3NzLmxvc2V5b3VyaXAuY29tJTI2cGF0aCUzRCUyNTJGJTI1M0ZlZCUyNTNEMjU2MCUyM0NGbmF0CnRyb2phbiUzQSUyRiUyRmFhNmRkZDJmLWQxY2YtNGE1Mi1iYTFiLTI2NDBjNDFhNzg1NiU0MDIxOC4xOTAuMjMwLjIwNyUzQTQxMjg4JTNGc2VjdXJpdHklM0R0bHMlMjZzbmklM0RoazEyLmJpbGliaWxpLmNvbSUyNmFsbG93SW5zZWN1cmUlM0QxJTI2dHlwZSUzRHRjcCUyNmhlYWRlclR5cGUlM0Rub25lJTIzSEsKc3MlM0ElMkYlMkZZMmhoWTJoaE1qQXRhV1YwWmkxd2IyeDVNVE13TlRveVJYUlFjVzQyU0ZscVZVNWpTRzlvVEdaVmNFWlJkMjVtYWtORFVUVnRhREZ0U21SRlRVTkNkV04xVjFvNVVERjFaR3RTUzBodVZuaDFielUxYXpGTFdIb3lSbTgyYW5KbmRERTRWelkyYjNCMGVURmxOR0p0TVdwNlprTm1RbUklMjUzRCU0MDg0LjE5LjMxLjYzJTNBNTA4NDElMjNERQoKCiVFOCVBRSVBMiVFOSU5OCU4NSVFOSU5MyVCRSVFNiU4RSVBNSVFNyVBNCVCQSVFNCVCRSU4QiVFRiVCQyU4OCVFNCVCOCU4MCVFOCVBMSU4QyVFNCVCOCU4MCVFNiU5RCVBMSVFOCVBRSVBMiVFOSU5OCU4NSVFOSU5MyVCRSVFNiU4RSVBNSVFNSU4RCVCMyVFNSU4RiVBRiVFRiVCQyU4OSVFRiVCQyU5QQpodHRwcyUzQSUyRiUyRnN1Yi54Zi5mcmVlLmhyJTJGYXV0bw=='))}"
-							id="content">${content}</textarea>
-						<div class="save-container">
-							<button class="save-btn" onclick="saveContent(this)">保存</button>
-							<span class="save-status" id="saveStatus"></span>
-						</div>
-						` : '<p>请绑定 <strong>变量名称</strong> 为 <strong>KV</strong> 的KV命名空间</p>'}
-					</div>
-					<br>
-					################################################################<br>
-					${decodeURIComponent(atob('dGVsZWdyYW0lMjAlRTQlQkElQTQlRTYlQjUlODElRTclQkUlQTQlMjAlRTYlOEElODAlRTYlOUMlQUYlRTUlQTQlQTclRTQlQkQlQUMlN0UlRTUlOUMlQTglRTclQkElQkYlRTUlOEYlOTElRTclODklOEMhJTNDYnIlM0UKJTNDYSUyMGhyZWYlM0QlMjdodHRwcyUzQSUyRiUyRnQubWUlMkZDTUxpdXNzc3MlMjclM0VodHRwcyUzQSUyRiUyRnQubWUlMkZDTUxpdXNzc3MlM0MlMkZhJTNFJTNDYnIlM0UKLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tJTNDYnIlM0UKZ2l0aHViJTIwJUU5JUExJUI5JUU3JTlCJUFFJUU1JTlDJUIwJUU1JTlEJTgwJTIwU3RhciFTdGFyIVN0YXIhISElM0NiciUzRQolM0NhJTIwaHJlZiUzRCUyN2h0dHBzJTNBJTJGJTJGZ2l0aHViLmNvbSUyRmNtbGl1JTJGQ0YtV29ya2Vycy1TVUIlMjclM0VodHRwcyUzQSUyRiUyRmdpdGh1Yi5jb20lMkZjbWxpdSUyRkNGLVdvcmtlcnMtU1VCJTNDJTJGYSUzRSUzQ2JyJTNFCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSUzQ2JyJTNFCiUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMyUyMw=='))}
-					<br><br>UA: <strong>${request.headers.get('User-Agent')}</strong>
-					<script>
-					function copyToClipboard(text, qrcode) {
-						navigator.clipboard.writeText(text).then(() => {
-							alert('已复制到剪贴板');
-						}).catch(err => {
-							console.error('复制失败:', err);
-						});
-						const qrcodeDiv = document.getElementById(qrcode);
-						qrcodeDiv.innerHTML = '';
-						new QRCode(qrcodeDiv, {
-							text: text,
-							width: 220, // 调整宽度
-							height: 220, // 调整高度
-							colorDark: "#000000", // 二维码颜色
-							colorLight: "#ffffff", // 背景颜色
-							correctLevel: QRCode.CorrectLevel.Q, // 设置纠错级别
-							scale: 1 // 调整像素颗粒度
-						});
-					}
-						
-					if (document.querySelector('.editor')) {
-						let timer;
-						const textarea = document.getElementById('content');
-						const originalContent = textarea.value;
-		
-						function goBack() {
-							const currentUrl = window.location.href;
-							const parentUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
-							window.location.href = parentUrl;
-						}
-		
-						function replaceFullwidthColon() {
-							const text = textarea.value;
-							textarea.value = text.replace(/：/g, ':');
-						}
-						
-						function saveContent(button) {
-							try {
-								const updateButtonText = (step) => {
-									button.textContent = \`保存中: \${step}\`;
-								};
-								// 检测是否为iOS设备
-								const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-								
-								// 仅在非iOS设备上执行replaceFullwidthColon
-								if (!isIOS) {
-									replaceFullwidthColon();
-								}
-								updateButtonText('开始保存');
-								button.disabled = true;
-
-								// 获取textarea内容和原始内容
-								const textarea = document.getElementById('content');
-								if (!textarea) {
-									throw new Error('找不到文本编辑区域');
-								}
-
-								updateButtonText('获取内容');
-								let newContent;
-								let originalContent;
-								try {
-									newContent = textarea.value || '';
-									originalContent = textarea.defaultValue || '';
-								} catch (e) {
-									console.error('获取内容错误:', e);
-									throw new Error('无法获取编辑内容');
-								}
-
-								updateButtonText('准备状态更新函数');
-								const updateStatus = (message, isError = false) => {
-									const statusElem = document.getElementById('saveStatus');
-									if (statusElem) {
-										statusElem.textContent = message;
-										statusElem.style.color = isError ? 'red' : '#666';
-									}
-								};
-
-								updateButtonText('准备按钮重置函数');
-								const resetButton = () => {
-									button.textContent = '保存';
-									button.disabled = false;
-								};
-
-								if (newContent !== originalContent) {
-									updateButtonText('发送保存请求');
-									fetch(window.location.href, {
-										method: 'POST',
-										body: newContent,
-										headers: {
-											'Content-Type': 'text/plain;charset=UTF-8'
-										},
-										cache: 'no-cache'
-									})
-									.then(response => {
-										updateButtonText('检查响应状态');
-										if (!response.ok) {
-											throw new Error(\`HTTP error! status: \${response.status}\`);
-										}
-										updateButtonText('更新保存状态');
-										const now = new Date().toLocaleString();
-										document.title = \`编辑已保存 \${now}\`;
-										updateStatus(\`已保存 \${now}\`);
-									})
-									.catch(error => {
-										updateButtonText('处理错误');
-										console.error('Save error:', error);
-										updateStatus(\`保存失败: \${error.message}\`, true);
-									})
-									.finally(() => {
-										resetButton();
-									});
-								} else {
-									updateButtonText('检查内容变化');
-									updateStatus('内容未变化');
-									resetButton();
-								}
-							} catch (error) {
-								console.error('保存过程出错:', error);
-								button.textContent = '保存';
-								button.disabled = false;
-								const statusElem = document.getElementById('saveStatus');
-								if (statusElem) {
-									statusElem.textContent = \`错误: \${error.message}\`;
-									statusElem.style.color = 'red';
-								}
-							}
-						}
-		
-						textarea.addEventListener('blur', saveContent);
-						textarea.addEventListener('input', () => {
-							clearTimeout(timer);
-							timer = setTimeout(saveContent, 5000);
-						});
-					}
-
-					function toggleNotice() {
-						const noticeContent = document.getElementById('noticeContent');
-						const noticeToggle = document.getElementById('noticeToggle');
-						if (noticeContent.style.display === 'none' || noticeContent.style.display === '') {
-							noticeContent.style.display = 'block';
-							noticeToggle.textContent = '隐藏访客订阅∧';
-						} else {
-							noticeContent.style.display = 'none';
-							noticeToggle.textContent = '查看访客订阅∨';
-						}
-					}
-			
-					// 初始化 noticeContent 的 display 属性
-					document.addEventListener('DOMContentLoaded', () => {
-						document.getElementById('noticeContent').style.display = 'none';
-					});
-					</script>
-				</body>
-			</html>
-		`;
-
-		return new Response(html, {
-			headers: { "Content-Type": "text/html;charset=utf-8" }
-		});
-	} catch (error) {
-		console.error('处理请求时发生错误:', error);
-		return new Response("服务器错误: " + error.message, {
-			status: 500,
-			headers: { "Content-Type": "text/plain;charset=utf-8" }
-		});
-	}
-}
+		  ],
+		  "route": {
+			"rule_set": [
+			  {
+				"tag": "geosite-geolocation-!cn",
+				"type": "remote",
+				"format": "binary",
+				"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-!cn.srs",
+				"download_detour": "select",
+				"update_interval": "1d"
+			  },
+			  {
+				"tag": "geosite-cn",
+				"type": "remote",
+				"format": "binary",
+				"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-cn.srs",
+				"download_detour": "select",
+				"update_interval": "1d"
+			  },
+			  {
+				"tag": "geoip-cn",
+				"type": "remote",
+				"format": "binary",
+				"url": "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cn.srs",
+				"download_detour": "select",
+				"update_interval": "1d"
+			  }
+			],
+			"auto_detect_interface": true,
+			"final": "select",
+			"rules": [
+                          {
+                         "inbound": "tun-in",
+                          "action": "sniff"
+                          },
+                          {
+                          "protocol": "dns",
+                          "action": "hijack-dns"
+                           },
+                          {
+                           "port": 443,
+                          "network": "udp",
+                          "action": "reject"
+                          },
+			  {
+				"clash_mode": "Direct",
+				"outbound": "direct"
+			  },
+			  {
+				"clash_mode": "Global",
+				"outbound": "select"
+			  },
+			  {
+				"rule_set": "geoip-cn",
+				"outbound": "direct"
+			  },
+			  {
+				"rule_set": "geosite-cn",
+				"outbound": "direct"
+			  },
+			  {
+				"ip_is_private": true,
+				"outbound": "direct"
+			  },
+			  {
+				"rule_set": "geosite-geolocation-!cn",
+				"outbound": "select"
+			  }
+			]
+		  },
+		  "ntp": {
+			"enabled": true,
+			"server": "time.apple.com",
+			"server_port": 123,
+			"interval": "30m",
+			"detour": "direct"
+		  }
+		}`;
+} 
